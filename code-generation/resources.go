@@ -5,7 +5,6 @@ import (
 	"html/template"
 	"io"
 	"os"
-	"sort"
 	"strings"
 
 	"github.com/hashicorp/go-hclog"
@@ -94,10 +93,10 @@ func toTemplateable(path, dirName string, pathItem *framework.OASPathItem) *temp
 	for _, postParam := range postParams {
 		pathItem.Parameters = append(pathItem.Parameters, postParam)
 	}
-	// Sort the parameters by name.
-	sort.Slice(pathItem.Parameters, func(i, j int) bool {
-		return pathItem.Parameters[i].Name < pathItem.Parameters[j].Name
-	})
+	//// Sort the parameters by name.
+	//sort.Slice(pathItem.Parameters, func(i, j int) bool {
+	//	return pathItem.Parameters[i].Name < pathItem.Parameters[j].Name
+	//})
 	return &templatable{
 		Endpoint:           path,
 		DirName:            dirName[strings.LastIndex(dirName, "/")+1:],
