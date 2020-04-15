@@ -84,6 +84,14 @@ func toTemplateable(path string, pathItem *framework.OASPathItem) *templatable {
 	lastField = strings.Replace(lastField, "{", "", -1)
 	lastField = strings.Replace(lastField, "}", "", -1)
 	lastField = strings.Replace(lastField, "_", "", -1)
+
+	// Only path parameters are included as the original params.
+	// For the rest of the params, they're located in the post body
+	// of the OpenAPI spec, so let's tack them together.
+	postParams := getPostParams(pathItem)
+	for _, postParam := range postParams {
+		pathItem.Parameters = append(pathItem.Parameters, postParam)
+	}
 	return &templatable{
 		Endpoint:           path,
 		ExportedFuncPrefix: strings.Title(strings.ToLower(lastField)),
@@ -93,6 +101,41 @@ func toTemplateable(path string, pathItem *framework.OASPathItem) *templatable {
 		SupportsWrite:      pathItem.Post != nil,
 		SupportsDelete:     pathItem.Delete != nil,
 	}
+}
+
+func getPostParams(pathItem *framework.OASPathItem) []framework.OASParameter {
+	if pathItem.Post == nil {
+		return nil
+	}
+	if pathItem.Post.RequestBody == nil {
+		return nil
+	}
+	if pathItem.Post.RequestBody.Content == nil {
+		return nil
+	}
+	// Collect these in a map to de-duplicate them.
+	postParams := make(map[string]framework.OASParameter)
+	for _, mediaTypeObject := range pathItem.Post.RequestBody.Content {
+		if mediaTypeObject.Schema == nil {
+			continue
+		}
+		if mediaTypeObject.Schema.Properties == nil {
+			continue
+		}
+		for propertyName, schema := range mediaTypeObject.Schema.Properties {
+			postParams[propertyName] = framework.OASParameter{
+				Name:        propertyName,
+				Description: schema.Description,
+				In:          "post",
+				Schema:      schema,
+			}
+		}
+	}
+	var toReturn []framework.OASParameter
+	for _, param := range postParams {
+		toReturn = append(toReturn, param)
+	}
+	return toReturn
 }
 
 const resourceTemplate = `package vault

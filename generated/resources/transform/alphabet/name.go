@@ -27,6 +27,11 @@ func NameResource() *schema.Resource {
 			Required:    true,
 			Description: "The name of the alphabet.",
 		},
+		"alphabet": {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "A string of characters that contains the alphabet set.",
+		},
 	}
 	return &schema.Resource{
 		Create: nameCreateResource,
@@ -48,6 +53,9 @@ func nameCreateResource(d *schema.ResourceData, meta interface{}) error {
 	data := map[string]interface{}{}
 	if v, ok := d.GetOkExists("name"); ok {
 		data["name"] = v
+	}
+	if v, ok := d.GetOkExists("alphabet"); ok {
+		data["alphabet"] = v
 	}
 
 	path := util.ReplacePathParameters(backend+nameEndpoint, d)
@@ -79,6 +87,9 @@ func nameReadResource(d *schema.ResourceData, meta interface{}) error {
 	if err := d.Set("name", resp.Data["name"]); err != nil {
 		return fmt.Errorf("error setting state key 'name': %s", err)
 	}
+	if err := d.Set("alphabet", resp.Data["alphabet"]); err != nil {
+		return fmt.Errorf("error setting state key 'alphabet': %s", err)
+	}
 	return nil
 }
 
@@ -91,6 +102,9 @@ func nameUpdateResource(d *schema.ResourceData, meta interface{}) error {
 	data := map[string]interface{}{}
 	if d.HasChange("name") {
 		data["name"] = d.Get("name")
+	}
+	if d.HasChange("alphabet") {
+		data["alphabet"] = d.Get("alphabet")
 	}
 	defer func() {
 		d.SetId(path)

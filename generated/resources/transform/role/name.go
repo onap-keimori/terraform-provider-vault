@@ -27,6 +27,10 @@ func NameResource() *schema.Resource {
 			Required:    true,
 			Description: "The name of the role.",
 		},
+		"transformations": {
+			Optional:    true,
+			Description: "A comma separated string or slice of transformations to use.",
+		},
 	}
 	return &schema.Resource{
 		Create: nameCreateResource,
@@ -48,6 +52,9 @@ func nameCreateResource(d *schema.ResourceData, meta interface{}) error {
 	data := map[string]interface{}{}
 	if v, ok := d.GetOkExists("name"); ok {
 		data["name"] = v
+	}
+	if v, ok := d.GetOkExists("transformations"); ok {
+		data["transformations"] = v
 	}
 
 	path := util.ReplacePathParameters(backend+nameEndpoint, d)
@@ -79,6 +86,9 @@ func nameReadResource(d *schema.ResourceData, meta interface{}) error {
 	if err := d.Set("name", resp.Data["name"]); err != nil {
 		return fmt.Errorf("error setting state key 'name': %s", err)
 	}
+	if err := d.Set("transformations", resp.Data["transformations"]); err != nil {
+		return fmt.Errorf("error setting state key 'transformations': %s", err)
+	}
 	return nil
 }
 
@@ -91,6 +101,9 @@ func nameUpdateResource(d *schema.ResourceData, meta interface{}) error {
 	data := map[string]interface{}{}
 	if d.HasChange("name") {
 		data["name"] = d.Get("name")
+	}
+	if d.HasChange("transformations") {
+		data["transformations"] = d.Get("transformations")
 	}
 	defer func() {
 		d.SetId(path)

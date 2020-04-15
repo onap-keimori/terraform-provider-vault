@@ -10,13 +10,13 @@ import (
 )
 
 const (
-	examplePath     = `/transform/role/{name}`
+	examplePath     = `/transform/transformation/{name}`
 	examplePathItem = `{
-  "description": "Read, write, and delete roles.",
+  "description": "Read, write, and delete transformations",
   "parameters": [
     {
       "name": "name",
-      "description": "The name of the role.",
+      "description": "The name of the transformation.",
       "in": "path",
       "schema": {
         "type": "string"
@@ -26,7 +26,7 @@ const (
   ],
   "x-vault-createSupported": true,
   "get": {
-    "operationId": "getTransformRoleName",
+    "operationId": "getTransformTransformationName",
     "tags": [
       "secrets"
     ],
@@ -37,7 +37,7 @@ const (
     }
   },
   "post": {
-    "operationId": "postTransformRoleName",
+    "operationId": "postTransformTransformationName",
     "tags": [
       "secrets"
     ],
@@ -47,12 +47,28 @@ const (
           "schema": {
             "type": "object",
             "properties": {
-              "transformations": {
+              "allowed_roles": {
                 "type": "array",
-                "description": "A comma separated string or slice of transformations to use.",
+                "description": "The set of roles allowed to perform this transformation.",
                 "items": {
                   "type": "string"
                 }
+              },
+              "masking_character": {
+                "type": "string",
+                "description": "The character used to replace data when in masking mode"
+              },
+              "template": {
+                "type": "string",
+                "description": "The name of the template to use."
+              },
+              "tweak_source": {
+                "type": "string",
+                "description": "The source of where the tweak value comes from. Only valid when in FPE mode."
+              },
+              "type": {
+                "type": "string",
+                "description": "The type of transformation to perform."
               }
             }
           }
@@ -66,7 +82,7 @@ const (
     }
   },
   "delete": {
-    "operationId": "deleteTransformRoleName",
+    "operationId": "deleteTransformTransformationName",
     "tags": [
       "secrets"
     ],
