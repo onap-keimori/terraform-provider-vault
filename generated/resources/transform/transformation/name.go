@@ -29,6 +29,15 @@ func NameResource() *schema.Resource {
 			Optional:    true,
 			Description: "The set of roles allowed to perform this transformation.",
 		},
+		"allowed_roles": {
+			Optional:    true,
+			Description: "The set of roles allowed to perform this transformation.",
+		},
+		"masking_character": {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "The character used to replace data when in masking mode",
+		},
 		"masking_character": {
 			Type:        schema.TypeString,
 			Optional:    true,
@@ -44,10 +53,25 @@ func NameResource() *schema.Resource {
 			Optional:    true,
 			Description: "The name of the template to use.",
 		},
+		"template": {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "The name of the template to use.",
+		},
 		"tweak_source": {
 			Type:        schema.TypeString,
 			Optional:    true,
 			Description: "The source of where the tweak value comes from. Only valid when in FPE mode.",
+		},
+		"tweak_source": {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "The source of where the tweak value comes from. Only valid when in FPE mode.",
+		},
+		"type": {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "The type of transformation to perform.",
 		},
 		"type": {
 			Type:        schema.TypeString,
@@ -76,6 +100,12 @@ func nameCreateResource(d *schema.ResourceData, meta interface{}) error {
 	if v, ok := d.GetOkExists("allowed_roles"); ok {
 		data["allowed_roles"] = v
 	}
+	if v, ok := d.GetOkExists("allowed_roles"); ok {
+		data["allowed_roles"] = v
+	}
+	if v, ok := d.GetOkExists("masking_character"); ok {
+		data["masking_character"] = v
+	}
 	if v, ok := d.GetOkExists("masking_character"); ok {
 		data["masking_character"] = v
 	}
@@ -85,8 +115,17 @@ func nameCreateResource(d *schema.ResourceData, meta interface{}) error {
 	if v, ok := d.GetOkExists("template"); ok {
 		data["template"] = v
 	}
+	if v, ok := d.GetOkExists("template"); ok {
+		data["template"] = v
+	}
 	if v, ok := d.GetOkExists("tweak_source"); ok {
 		data["tweak_source"] = v
+	}
+	if v, ok := d.GetOkExists("tweak_source"); ok {
+		data["tweak_source"] = v
+	}
+	if v, ok := d.GetOkExists("type"); ok {
+		data["type"] = v
 	}
 	if v, ok := d.GetOkExists("type"); ok {
 		data["type"] = v
@@ -121,6 +160,12 @@ func nameReadResource(d *schema.ResourceData, meta interface{}) error {
 	if err := d.Set("allowed_roles", resp.Data["allowed_roles"]); err != nil {
 		return fmt.Errorf("error setting state key 'allowed_roles': %s", err)
 	}
+	if err := d.Set("allowed_roles", resp.Data["allowed_roles"]); err != nil {
+		return fmt.Errorf("error setting state key 'allowed_roles': %s", err)
+	}
+	if err := d.Set("masking_character", resp.Data["masking_character"]); err != nil {
+		return fmt.Errorf("error setting state key 'masking_character': %s", err)
+	}
 	if err := d.Set("masking_character", resp.Data["masking_character"]); err != nil {
 		return fmt.Errorf("error setting state key 'masking_character': %s", err)
 	}
@@ -130,8 +175,17 @@ func nameReadResource(d *schema.ResourceData, meta interface{}) error {
 	if err := d.Set("template", resp.Data["template"]); err != nil {
 		return fmt.Errorf("error setting state key 'template': %s", err)
 	}
+	if err := d.Set("template", resp.Data["template"]); err != nil {
+		return fmt.Errorf("error setting state key 'template': %s", err)
+	}
 	if err := d.Set("tweak_source", resp.Data["tweak_source"]); err != nil {
 		return fmt.Errorf("error setting state key 'tweak_source': %s", err)
+	}
+	if err := d.Set("tweak_source", resp.Data["tweak_source"]); err != nil {
+		return fmt.Errorf("error setting state key 'tweak_source': %s", err)
+	}
+	if err := d.Set("type", resp.Data["type"]); err != nil {
+		return fmt.Errorf("error setting state key 'type': %s", err)
 	}
 	if err := d.Set("type", resp.Data["type"]); err != nil {
 		return fmt.Errorf("error setting state key 'type': %s", err)
@@ -149,6 +203,12 @@ func nameUpdateResource(d *schema.ResourceData, meta interface{}) error {
 	if d.HasChange("allowed_roles") {
 		data["allowed_roles"] = d.Get("allowed_roles")
 	}
+	if d.HasChange("allowed_roles") {
+		data["allowed_roles"] = d.Get("allowed_roles")
+	}
+	if d.HasChange("masking_character") {
+		data["masking_character"] = d.Get("masking_character")
+	}
 	if d.HasChange("masking_character") {
 		data["masking_character"] = d.Get("masking_character")
 	}
@@ -158,8 +218,17 @@ func nameUpdateResource(d *schema.ResourceData, meta interface{}) error {
 	if d.HasChange("template") {
 		data["template"] = d.Get("template")
 	}
+	if d.HasChange("template") {
+		data["template"] = d.Get("template")
+	}
 	if d.HasChange("tweak_source") {
 		data["tweak_source"] = d.Get("tweak_source")
+	}
+	if d.HasChange("tweak_source") {
+		data["tweak_source"] = d.Get("tweak_source")
+	}
+	if d.HasChange("type") {
+		data["type"] = d.Get("type")
 	}
 	if d.HasChange("type") {
 		data["type"] = d.Get("type")
