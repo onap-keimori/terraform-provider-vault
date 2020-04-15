@@ -22,15 +22,15 @@ func NameResource() *schema.Resource {
 				return strings.Trim(v.(string), "/")
 			},
 		},
-		"name": {
-			Type:        schema.TypeString,
-			Required:    true,
-			Description: "The name of the template.",
-		},
 		"alphabet": {
 			Type:        schema.TypeString,
 			Optional:    true,
 			Description: "The alphabet to use for this template. This is only used during FPE transformations.",
+		},
+		"name": {
+			Type:        schema.TypeString,
+			Required:    true,
+			Description: "The name of the template.",
 		},
 		"pattern": {
 			Type:        schema.TypeString,
@@ -61,11 +61,11 @@ func nameCreateResource(d *schema.ResourceData, meta interface{}) error {
 	backend := d.Get("path").(string)
 
 	data := map[string]interface{}{}
-	if v, ok := d.GetOkExists("name"); ok {
-		data["name"] = v
-	}
 	if v, ok := d.GetOkExists("alphabet"); ok {
 		data["alphabet"] = v
+	}
+	if v, ok := d.GetOkExists("name"); ok {
+		data["name"] = v
 	}
 	if v, ok := d.GetOkExists("pattern"); ok {
 		data["pattern"] = v
@@ -100,11 +100,11 @@ func nameReadResource(d *schema.ResourceData, meta interface{}) error {
 		d.SetId("")
 		return nil
 	}
-	if err := d.Set("name", resp.Data["name"]); err != nil {
-		return fmt.Errorf("error setting state key 'name': %s", err)
-	}
 	if err := d.Set("alphabet", resp.Data["alphabet"]); err != nil {
 		return fmt.Errorf("error setting state key 'alphabet': %s", err)
+	}
+	if err := d.Set("name", resp.Data["name"]); err != nil {
+		return fmt.Errorf("error setting state key 'name': %s", err)
 	}
 	if err := d.Set("pattern", resp.Data["pattern"]); err != nil {
 		return fmt.Errorf("error setting state key 'pattern': %s", err)
@@ -122,11 +122,11 @@ func nameUpdateResource(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Updating %q", path)
 
 	data := map[string]interface{}{}
-	if d.HasChange("name") {
-		data["name"] = d.Get("name")
-	}
 	if d.HasChange("alphabet") {
 		data["alphabet"] = d.Get("alphabet")
+	}
+	if d.HasChange("name") {
+		data["name"] = d.Get("name")
 	}
 	if d.HasChange("pattern") {
 		data["pattern"] = d.Get("pattern")

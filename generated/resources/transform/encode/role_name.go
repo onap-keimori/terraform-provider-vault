@@ -22,10 +22,19 @@ func RolenameResource() *schema.Resource {
 				return strings.Trim(v.(string), "/")
 			},
 		},
+		"batch_input": {
+			Optional:    true,
+			Description: "Specifies a list of items to be encoded in a single batch. If this parameter is set, the parameters &#39;value&#39;, &#39;transformation&#39; and &#39;tweak&#39; will be ignored. Each batch item within the list can specify these parameters instead.",
+		},
 		"role_name": {
 			Type:        schema.TypeString,
 			Required:    true,
 			Description: "The name of the role.",
+		},
+		"transformation": {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "The transformation to perform. If no value is provided and the role contains a single transformation, this value will be inferred from the role.",
 		},
 		"tweak": {
 			Type:        schema.TypeString,
@@ -36,15 +45,6 @@ func RolenameResource() *schema.Resource {
 			Type:        schema.TypeString,
 			Optional:    true,
 			Description: "The value in which to encode.",
-		},
-		"batch_input": {
-			Optional:    true,
-			Description: "Specifies a list of items to be encoded in a single batch. If this parameter is set, the parameters &#39;value&#39;, &#39;transformation&#39; and &#39;tweak&#39; will be ignored. Each batch item within the list can specify these parameters instead.",
-		},
-		"transformation": {
-			Type:        schema.TypeString,
-			Optional:    true,
-			Description: "The transformation to perform. If no value is provided and the role contains a single transformation, this value will be inferred from the role.",
 		},
 	}
 	return &schema.Resource{
@@ -62,20 +62,20 @@ func rolenameCreateResource(d *schema.ResourceData, meta interface{}) error {
 	backend := d.Get("path").(string)
 
 	data := map[string]interface{}{}
+	if v, ok := d.GetOkExists("batch_input"); ok {
+		data["batch_input"] = v
+	}
 	if v, ok := d.GetOkExists("role_name"); ok {
 		data["role_name"] = v
+	}
+	if v, ok := d.GetOkExists("transformation"); ok {
+		data["transformation"] = v
 	}
 	if v, ok := d.GetOkExists("tweak"); ok {
 		data["tweak"] = v
 	}
 	if v, ok := d.GetOkExists("value"); ok {
 		data["value"] = v
-	}
-	if v, ok := d.GetOkExists("batch_input"); ok {
-		data["batch_input"] = v
-	}
-	if v, ok := d.GetOkExists("transformation"); ok {
-		data["transformation"] = v
 	}
 
 	path := util.ReplacePathParameters(backend+rolenameEndpoint, d)
@@ -96,20 +96,20 @@ func rolenameUpdateResource(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Updating %q", path)
 
 	data := map[string]interface{}{}
+	if d.HasChange("batch_input") {
+		data["batch_input"] = d.Get("batch_input")
+	}
 	if d.HasChange("role_name") {
 		data["role_name"] = d.Get("role_name")
+	}
+	if d.HasChange("transformation") {
+		data["transformation"] = d.Get("transformation")
 	}
 	if d.HasChange("tweak") {
 		data["tweak"] = d.Get("tweak")
 	}
 	if d.HasChange("value") {
 		data["value"] = d.Get("value")
-	}
-	if d.HasChange("batch_input") {
-		data["batch_input"] = d.Get("batch_input")
-	}
-	if d.HasChange("transformation") {
-		data["transformation"] = d.Get("transformation")
 	}
 	defer func() {
 		d.SetId(path)

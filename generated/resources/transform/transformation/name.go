@@ -22,6 +22,15 @@ func NameResource() *schema.Resource {
 				return strings.Trim(v.(string), "/")
 			},
 		},
+		"allowed_roles": {
+			Optional:    true,
+			Description: "The set of roles allowed to perform this transformation.",
+		},
+		"masking_character": {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "The character used to replace data when in masking mode",
+		},
 		"name": {
 			Type:        schema.TypeString,
 			Required:    true,
@@ -42,15 +51,6 @@ func NameResource() *schema.Resource {
 			Optional:    true,
 			Description: "The type of transformation to perform.",
 		},
-		"allowed_roles": {
-			Optional:    true,
-			Description: "The set of roles allowed to perform this transformation.",
-		},
-		"masking_character": {
-			Type:        schema.TypeString,
-			Optional:    true,
-			Description: "The character used to replace data when in masking mode",
-		},
 	}
 	return &schema.Resource{
 		Create: nameCreateResource,
@@ -70,6 +70,12 @@ func nameCreateResource(d *schema.ResourceData, meta interface{}) error {
 	backend := d.Get("path").(string)
 
 	data := map[string]interface{}{}
+	if v, ok := d.GetOkExists("allowed_roles"); ok {
+		data["allowed_roles"] = v
+	}
+	if v, ok := d.GetOkExists("masking_character"); ok {
+		data["masking_character"] = v
+	}
 	if v, ok := d.GetOkExists("name"); ok {
 		data["name"] = v
 	}
@@ -81,12 +87,6 @@ func nameCreateResource(d *schema.ResourceData, meta interface{}) error {
 	}
 	if v, ok := d.GetOkExists("type"); ok {
 		data["type"] = v
-	}
-	if v, ok := d.GetOkExists("allowed_roles"); ok {
-		data["allowed_roles"] = v
-	}
-	if v, ok := d.GetOkExists("masking_character"); ok {
-		data["masking_character"] = v
 	}
 
 	path := util.ReplacePathParameters(backend+nameEndpoint, d)
@@ -115,6 +115,12 @@ func nameReadResource(d *schema.ResourceData, meta interface{}) error {
 		d.SetId("")
 		return nil
 	}
+	if err := d.Set("allowed_roles", resp.Data["allowed_roles"]); err != nil {
+		return fmt.Errorf("error setting state key 'allowed_roles': %s", err)
+	}
+	if err := d.Set("masking_character", resp.Data["masking_character"]); err != nil {
+		return fmt.Errorf("error setting state key 'masking_character': %s", err)
+	}
 	if err := d.Set("name", resp.Data["name"]); err != nil {
 		return fmt.Errorf("error setting state key 'name': %s", err)
 	}
@@ -127,12 +133,6 @@ func nameReadResource(d *schema.ResourceData, meta interface{}) error {
 	if err := d.Set("type", resp.Data["type"]); err != nil {
 		return fmt.Errorf("error setting state key 'type': %s", err)
 	}
-	if err := d.Set("allowed_roles", resp.Data["allowed_roles"]); err != nil {
-		return fmt.Errorf("error setting state key 'allowed_roles': %s", err)
-	}
-	if err := d.Set("masking_character", resp.Data["masking_character"]); err != nil {
-		return fmt.Errorf("error setting state key 'masking_character': %s", err)
-	}
 	return nil
 }
 
@@ -143,6 +143,12 @@ func nameUpdateResource(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Updating %q", path)
 
 	data := map[string]interface{}{}
+	if d.HasChange("allowed_roles") {
+		data["allowed_roles"] = d.Get("allowed_roles")
+	}
+	if d.HasChange("masking_character") {
+		data["masking_character"] = d.Get("masking_character")
+	}
 	if d.HasChange("name") {
 		data["name"] = d.Get("name")
 	}
@@ -154,12 +160,6 @@ func nameUpdateResource(d *schema.ResourceData, meta interface{}) error {
 	}
 	if d.HasChange("type") {
 		data["type"] = d.Get("type")
-	}
-	if d.HasChange("allowed_roles") {
-		data["allowed_roles"] = d.Get("allowed_roles")
-	}
-	if d.HasChange("masking_character") {
-		data["masking_character"] = d.Get("masking_character")
 	}
 	defer func() {
 		d.SetId(path)

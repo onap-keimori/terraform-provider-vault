@@ -22,14 +22,14 @@ func RolenameResource() *schema.Resource {
 				return strings.Trim(v.(string), "/")
 			},
 		},
+		"batch_input": {
+			Optional:    true,
+			Description: "Specifies a list of items to be decoded in a single batch. If this parameter is set, the top-level parameters &#39;value&#39;, &#39;transformation&#39; and &#39;tweak&#39; will be ignored. Each batch item within the list can specify these parameters instead.",
+		},
 		"role_name": {
 			Type:        schema.TypeString,
 			Required:    true,
 			Description: "The name of the role.",
-		},
-		"batch_input": {
-			Optional:    true,
-			Description: "Specifies a list of items to be decoded in a single batch. If this parameter is set, the top-level parameters &#39;value&#39;, &#39;transformation&#39; and &#39;tweak&#39; will be ignored. Each batch item within the list can specify these parameters instead.",
 		},
 		"transformation": {
 			Type:        schema.TypeString,
@@ -62,11 +62,11 @@ func rolenameCreateResource(d *schema.ResourceData, meta interface{}) error {
 	backend := d.Get("path").(string)
 
 	data := map[string]interface{}{}
-	if v, ok := d.GetOkExists("role_name"); ok {
-		data["role_name"] = v
-	}
 	if v, ok := d.GetOkExists("batch_input"); ok {
 		data["batch_input"] = v
+	}
+	if v, ok := d.GetOkExists("role_name"); ok {
+		data["role_name"] = v
 	}
 	if v, ok := d.GetOkExists("transformation"); ok {
 		data["transformation"] = v
@@ -96,11 +96,11 @@ func rolenameUpdateResource(d *schema.ResourceData, meta interface{}) error {
 	log.Printf("[DEBUG] Updating %q", path)
 
 	data := map[string]interface{}{}
-	if d.HasChange("role_name") {
-		data["role_name"] = d.Get("role_name")
-	}
 	if d.HasChange("batch_input") {
 		data["batch_input"] = d.Get("batch_input")
+	}
+	if d.HasChange("role_name") {
+		data["role_name"] = d.Get("role_name")
 	}
 	if d.HasChange("transformation") {
 		data["transformation"] = d.Get("transformation")
