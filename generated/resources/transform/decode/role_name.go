@@ -1,5 +1,8 @@
 package decode
 
+// DO NOT EDIT
+// This code is generated.
+
 import (
 	"fmt"
 	"log"

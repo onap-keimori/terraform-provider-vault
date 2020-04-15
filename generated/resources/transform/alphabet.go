@@ -1,5 +1,8 @@
 package transform
 
+// DO NOT EDIT
+// This code is generated.
+
 import (
 	"fmt"
 	"log"
@@ -8,6 +11,8 @@ import (
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/hashicorp/vault/api"
 )
+
+// This resource supports "/transform/alphabet".
 
 func AlphabetResource() *schema.Resource {
 	fields := map[string]*schema.Schema{

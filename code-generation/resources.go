@@ -146,6 +146,8 @@ func getPostParams(pathItem *framework.OASPathItem) []framework.OASParameter {
 }
 
 const resourceTemplate = `package {{.DirName}}
+// DO NOT EDIT
+// This code is generated.
 
 import (
 	"fmt"
@@ -161,6 +163,8 @@ import (
 
 {{- if .SupportsWrite }}
 const {{.PrivateFuncPrefix}}Endpoint = "{{ .Endpoint }}"
+{{- else}}
+// This resource supports "{{ .Endpoint }}".
 {{ end }}
 
 func {{.ExportedFuncPrefix}}Resource() *schema.Resource {
