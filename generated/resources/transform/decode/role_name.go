@@ -1,4 +1,4 @@
-package vault
+package decode
 
 import (
 	"fmt"

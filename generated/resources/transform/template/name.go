@@ -1,4 +1,4 @@
-package vault
+package template
 
 import (
 	"fmt"
@@ -27,6 +27,11 @@ func NameResource() *schema.Resource {
 			Required:    true,
 			Description: "The name of the template.",
 		},
+		"alphabet": {
+			Type:        schema.TypeString,
+			Optional:    true,
+			Description: "The alphabet to use for this template. This is only used during FPE transformations.",
+		},
 		"pattern": {
 			Type:        schema.TypeString,
 			Optional:    true,
@@ -36,11 +41,6 @@ func NameResource() *schema.Resource {
 			Type:        schema.TypeString,
 			Optional:    true,
 			Description: "The pattern type to use for match detection. Currently, only regex is supported.",
-		},
-		"alphabet": {
-			Type:        schema.TypeString,
-			Optional:    true,
-			Description: "The alphabet to use for this template. This is only used during FPE transformations.",
 		},
 	}
 	return &schema.Resource{
@@ -64,14 +64,14 @@ func nameCreateResource(d *schema.ResourceData, meta interface{}) error {
 	if v, ok := d.GetOkExists("name"); ok {
 		data["name"] = v
 	}
+	if v, ok := d.GetOkExists("alphabet"); ok {
+		data["alphabet"] = v
+	}
 	if v, ok := d.GetOkExists("pattern"); ok {
 		data["pattern"] = v
 	}
 	if v, ok := d.GetOkExists("type"); ok {
 		data["type"] = v
-	}
-	if v, ok := d.GetOkExists("alphabet"); ok {
-		data["alphabet"] = v
 	}
 
 	path := util.ReplacePathParameters(backend+nameEndpoint, d)
@@ -103,14 +103,14 @@ func nameReadResource(d *schema.ResourceData, meta interface{}) error {
 	if err := d.Set("name", resp.Data["name"]); err != nil {
 		return fmt.Errorf("error setting state key 'name': %s", err)
 	}
+	if err := d.Set("alphabet", resp.Data["alphabet"]); err != nil {
+		return fmt.Errorf("error setting state key 'alphabet': %s", err)
+	}
 	if err := d.Set("pattern", resp.Data["pattern"]); err != nil {
 		return fmt.Errorf("error setting state key 'pattern': %s", err)
 	}
 	if err := d.Set("type", resp.Data["type"]); err != nil {
 		return fmt.Errorf("error setting state key 'type': %s", err)
-	}
-	if err := d.Set("alphabet", resp.Data["alphabet"]); err != nil {
-		return fmt.Errorf("error setting state key 'alphabet': %s", err)
 	}
 	return nil
 }
@@ -125,14 +125,14 @@ func nameUpdateResource(d *schema.ResourceData, meta interface{}) error {
 	if d.HasChange("name") {
 		data["name"] = d.Get("name")
 	}
+	if d.HasChange("alphabet") {
+		data["alphabet"] = d.Get("alphabet")
+	}
 	if d.HasChange("pattern") {
 		data["pattern"] = d.Get("pattern")
 	}
 	if d.HasChange("type") {
 		data["type"] = d.Get("type")
-	}
-	if d.HasChange("alphabet") {
-		data["alphabet"] = d.Get("alphabet")
 	}
 	defer func() {
 		d.SetId(path)

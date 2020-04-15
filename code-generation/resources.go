@@ -43,7 +43,7 @@ func GenerateResourceFile(logger hclog.Logger, path string, pathItem *framework.
 			os.Exit(1)
 		}
 	}()
-	if err := generateResource(w, path, pathItem); err != nil {
+	if err := generateResource(w, path, parentDir, pathItem); err != nil {
 		return err
 	}
 	return nil
@@ -51,18 +51,19 @@ func GenerateResourceFile(logger hclog.Logger, path string, pathItem *framework.
 
 // generateResource takes one pathItem and uses a template to generate code
 // for it. This code is written to the given writer.
-func generateResource(writer io.Writer, path string, pathItem *framework.OASPathItem) error {
+func generateResource(writer io.Writer, path, dirName string, pathItem *framework.OASPathItem) error {
 	tmpl, err := template.New("resourceTemplate").Parse(resourceTemplate)
 	if err != nil {
 		return err
 	}
-	return tmpl.Execute(writer, toTemplateable(path, pathItem))
+	return tmpl.Execute(writer, toTemplateable(path, dirName, pathItem))
 }
 
 // templatable is a convenience struct that plays easily with Go's
 // template package.
 type templatable struct {
 	Endpoint           string
+	DirName            string
 	ExportedFuncPrefix string
 	PrivateFuncPrefix  string
 	Parameters         []framework.OASParameter
@@ -73,7 +74,7 @@ type templatable struct {
 
 // TODO what about ForceNew, Computed
 // TODO doesn't yet support field types of "object", "array"
-func toTemplateable(path string, pathItem *framework.OASPathItem) *templatable {
+func toTemplateable(path, dirName string, pathItem *framework.OASPathItem) *templatable {
 	// Isolate the last field in the path and use it to prefix functions
 	// to prevent naming collisions.
 	pathFields := strings.Split(path, "/")
@@ -94,6 +95,7 @@ func toTemplateable(path string, pathItem *framework.OASPathItem) *templatable {
 	}
 	return &templatable{
 		Endpoint:           path,
+		DirName:            dirName[strings.LastIndex(dirName, "/")+1:],
 		ExportedFuncPrefix: strings.Title(strings.ToLower(lastField)),
 		PrivateFuncPrefix:  strings.ToLower(lastField),
 		Parameters:         pathItem.Parameters,
@@ -138,7 +140,7 @@ func getPostParams(pathItem *framework.OASPathItem) []framework.OASParameter {
 	return toReturn
 }
 
-const resourceTemplate = `package vault
+const resourceTemplate = `package {{.DirName}}
 
 import (
 	"fmt"

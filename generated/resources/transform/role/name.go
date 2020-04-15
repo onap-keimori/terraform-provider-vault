@@ -1,4 +1,4 @@
-package vault
+package role
 
 import (
 	"fmt"
