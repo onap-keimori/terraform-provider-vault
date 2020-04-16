@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"flag"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -35,15 +36,19 @@ func main() {
 		os.Exit(1)
 	}
 
+	count := 0
 	for path, pathItem := range oasDoc.Paths {
-		for _, allowedPath := range codegen.AllowedPaths {
+		for allowedPath, fileType := range codegen.AllowedPaths {
 			if !strings.HasPrefix(path, allowedPath) {
 				continue
 			}
-			if err := codegen.GenerateResourceFile(logger, path, pathItem); err != nil {
+			count++
+			logger.Info(fmt.Sprintf("generating %s for %s\n", fileType.String(), path))
+			if err := codegen.GenerateFile(logger, fileType, path, pathItem); err != nil {
 				logger.Error(err.Error())
 				os.Exit(1)
 			}
 		}
 	}
+	logger.Info(fmt.Sprintf("generated %d files\n", count))
 }

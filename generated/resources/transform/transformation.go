@@ -17,9 +17,10 @@ import (
 func TransformationResource() *schema.Resource {
 	fields := map[string]*schema.Schema{
 		"path": {
-			Type:     schema.TypeString,
-			Required: true,
-			ForceNew: true,
+			Type:        schema.TypeString,
+			Required:    true,
+			ForceNew:    true,
+			Description: "Path to backend to configure.",
 			StateFunc: func(v interface{}) string {
 				return strings.Trim(v.(string), "/")
 			},
