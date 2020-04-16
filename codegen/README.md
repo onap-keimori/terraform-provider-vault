@@ -19,5 +19,7 @@ for deprecations.
 the generated code is correct. This is an important piece of the QA process.
 - Hand-write unit tests for the code.
 - Hand-add the new resource or data source to `vault/provider.go`.
+- Hand update the partially generated doc to complete it.
+- Add the doc to the sidebar/layout so it will appear in nav.
 
 This process is designed this way to ensure high quality in the generated code.

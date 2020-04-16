@@ -1,43 +1,24 @@
 ---
 layout: "vault"
-page_title: "Vault: vault_jwt_auth_backend resource"
-sidebar_current: "docs-vault-resource-jwt-auth-backend"
+page_title: "Vault: <TODO>"
+sidebar_current: "<TODO>"
 description: |-
-  Managing JWT/OIDC auth backends in Vault
+  <TODO>
 ---
 
-# vault\_jwt\_auth\_backend
+# <TODO>
 
-Provides a resource for managing an
-[JWT auth backend within Vault](https://www.vaultproject.io/docs/auth/jwt.html).
+<TODO>
 
 ## Example Usage
 
-Manage JWT auth backend:
-
+<TODO - this and HCL example below>
 ```hcl
 resource "vault_jwt_auth_backend" "example" {
     description  = "Demonstration of the Terraform JWT auth backend"
     path = "jwt"
     oidc_discovery_url = "https://myco.auth0.com/"
     bound_issuer = "https://myco.auth0.com/"
-}
-```
-
-Manage OIDC auth backend:
-
-```hcl
-resource "vault_jwt_auth_backend" "example" {
-    description  = "Demonstration of the Terraform JWT auth backend"
-    path = "oidc"
-    type = "oidc"
-    oidc_discovery_url = "https://myco.auth0.com/"
-    oidc_client_id = "1234567890"
-    oidc_client_secret = "secret123456"
-    bound_issuer = "https://myco.auth0.com/"
-    tune {
-        listing_visibility = "unauth"
-    }
 }
 ```
 
