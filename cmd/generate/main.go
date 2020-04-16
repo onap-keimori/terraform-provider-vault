@@ -11,7 +11,7 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/framework"
-	codegen "github.com/terraform-providers/terraform-provider-vault/code-generation"
+	codegen "github.com/terraform-providers/terraform-provider-vault/codegen"
 )
 
 var pathToOpenAPIDoc = flag.String("openapi-doc", "", "path/to/openapi.json")
@@ -42,9 +42,9 @@ func main() {
 			if !strings.HasPrefix(path, allowedPath) {
 				continue
 			}
-			count++
-			logger.Info(fmt.Sprintf("generating %s for %s\n", fileType.String(), path))
-			if err := codegen.GenerateFile(logger, fileType, path, pathItem); err != nil {
+			count += 2
+			logger.Info(fmt.Sprintf("generating %s and docs for %s\n", fileType.String(), path))
+			if err := codegen.GenerateFiles(logger, fileType, path, pathItem); err != nil {
 				logger.Error(err.Error())
 				os.Exit(1)
 			}

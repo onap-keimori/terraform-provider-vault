@@ -10,6 +10,7 @@ build: fmtcheck
 
 generate:
 	rm -rf generated/*
+	rm -rf website/docs/generated/*
 	go run cmd/generate/main.go -openapi-doc=testdata/openapi.json
 
 test: fmtcheck

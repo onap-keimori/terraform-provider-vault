@@ -2,6 +2,7 @@ package codegen
 
 import (
 	"bufio"
+	"fmt"
 	"html/template"
 	"io"
 	"os"
@@ -12,32 +13,25 @@ import (
 	"github.com/hashicorp/vault/sdk/framework"
 )
 
-type FileType int
-
-const (
-	FileTypeDataSource FileType = iota
-	FileTypeResource
-)
-
-func (t FileType) String() string {
-	switch t {
-	case FileTypeDataSource:
-		return "datasources"
-	}
-	return "resources"
-}
-
-var pathToGeneratedCodeDir = func() string {
+var pathToHomeDir = func() string {
 	repoName := "terraform-provider-vault"
 	wd, _ := os.Getwd()
 	pathParts := strings.Split(wd, repoName)
-	return pathParts[0] + repoName + "/generated/"
+	return pathParts[0] + repoName
 }()
 
-func GenerateFile(logger hclog.Logger, fileType FileType, path string, pathItem *framework.OASPathItem) error {
-	pathToFile := pathToGeneratedCodeDir + fileType.String() + path + ".go"
-	pathToFile = strings.Replace(pathToFile, "{", "", -1)
-	pathToFile = strings.Replace(pathToFile, "}", "", -1)
+func GenerateFiles(logger hclog.Logger, fileType FileType, path string, pathItem *framework.OASPathItem) error {
+	if err := generateCode(logger, fileType, path, pathItem); err != nil {
+		return err
+	}
+	if err := generateDoc(logger, fileType, path, pathItem); err != nil {
+		return err
+	}
+	return nil
+}
+
+func generateCode(logger hclog.Logger, fileType FileType, path string, pathItem *framework.OASPathItem) error {
+	pathToFile := cleanFilePath(fmt.Sprintf("%s/generated/%s%s.go", pathToHomeDir, fileType.String(), path))
 	parentDir := pathToFile[:strings.LastIndex(pathToFile, "/")]
 	if err := os.MkdirAll(parentDir, 0775); err != nil {
 		return err
@@ -49,29 +43,68 @@ func GenerateFile(logger hclog.Logger, fileType FileType, path string, pathItem 
 	defer func() {
 		if err := f.Close(); err != nil {
 			logger.Error(err.Error())
-			os.Exit(1)
 		}
 	}()
 	w := bufio.NewWriter(f)
 	defer func() {
 		if err := w.Flush(); err != nil {
 			logger.Error(err.Error())
-			os.Exit(1)
 		}
 	}()
-	if err := generateResource(w, fileType, path, parentDir, pathItem); err != nil {
+	if err := parseTemplate(w, fileType, path, parentDir, pathItem); err != nil {
 		return err
 	}
 	return nil
 }
 
-// generateResource takes one pathItem and uses a template to generate code
+func cleanFilePath(path string) string {
+	path = strings.Replace(path, "{", "", -1)
+	path = strings.Replace(path, "}", "", -1)
+	return path
+}
+
+func toDocName(s string) string {
+	if strings.HasPrefix(s, "/") {
+		s = s[1:]
+	}
+	return strings.Replace(s, "/", "-", -1)
+}
+
+func generateDoc(logger hclog.Logger, fileType FileType, path string, pathItem *framework.OASPathItem) error {
+	pathToFile := cleanFilePath(fmt.Sprintf("%s/website/docs/generated/%s/%s.md", pathToHomeDir, fileType.String(), toDocName(path)))
+	parentDir := pathToFile[:strings.LastIndex(pathToFile, "/")]
+	if err := os.MkdirAll(parentDir, 0775); err != nil {
+		return err
+	}
+	f, err := os.Create(pathToFile)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err := f.Close(); err != nil {
+			logger.Error(err.Error())
+		}
+	}()
+	w := bufio.NewWriter(f)
+	defer func() {
+		if err := w.Flush(); err != nil {
+			logger.Error(err.Error())
+		}
+	}()
+	if err := parseTemplate(w, FileTypeDoc, path, parentDir, pathItem); err != nil {
+		return err
+	}
+	return nil
+}
+
+// parseTemplate takes one pathItem and uses a template to generate code
 // for it. This code is written to the given writer.
-func generateResource(writer io.Writer, fileType FileType, path, dirName string, pathItem *framework.OASPathItem) error {
+func parseTemplate(writer io.Writer, fileType FileType, path, dirName string, pathItem *framework.OASPathItem) error {
 	tmpl, err := template.New(fileType.String()).Parse(templates[fileType])
 	if err != nil {
 		return err
 	}
+	// TODO toTemplateable could only be called once.
 	return tmpl.Execute(writer, toTemplateable(path, dirName, pathItem))
 }
 
@@ -88,6 +121,7 @@ type templatable struct {
 	SupportsDelete     bool
 }
 
+// TODO need to generate docs too
 // TODO sensitive fields
 // TODO what about ForceNew, Computed
 // TODO doesn't yet support field types of "object", "array"
@@ -103,25 +137,7 @@ func toTemplateable(path, dirName string, pathItem *framework.OASPathItem) *temp
 	lastField = strings.Replace(lastField, "}", "", -1)
 	lastField = strings.Replace(lastField, "_", "", -1)
 
-	// Only path parameters are included as the original params.
-	// For the rest of the params, they're located in the post body
-	// of the OpenAPI spec, so let's tack them together.
-	postParams := getPostParams(pathItem)
-
-	// There also can be dupes, so let's track all they keys we've
-	// seen before putting new ones in.
-	unique := make(map[string]bool)
-	for _, param := range pathItem.Parameters {
-		// We can assume these are already unique because they originated
-		// from a map where the key was their name.
-		unique[param.Name] = true
-	}
-	for _, param := range postParams {
-		if found := unique[param.Name]; !found {
-			pathItem.Parameters = append(pathItem.Parameters, param)
-			unique[param.Name] = true
-		}
-	}
+	appendPostParamsToTopLevel(pathItem)
 
 	// Sort the parameters by name so they won't shift every time
 	// new files are generated.
@@ -140,18 +156,27 @@ func toTemplateable(path, dirName string, pathItem *framework.OASPathItem) *temp
 	}
 }
 
-func getPostParams(pathItem *framework.OASPathItem) map[string]framework.OASParameter {
+// parameters can be buried deep in the post request body. For
+// convenience during templating, we dig down and grab those,
+// and just put them at the top level with the rest.
+func appendPostParamsToTopLevel(pathItem *framework.OASPathItem) {
 	if pathItem.Post == nil {
-		return nil
+		return
 	}
 	if pathItem.Post.RequestBody == nil {
-		return nil
+		return
 	}
 	if pathItem.Post.RequestBody.Content == nil {
-		return nil
+		return
 	}
-	// Collect these in a map to de-duplicate them.
-	postParams := make(map[string]framework.OASParameter)
+	// There also can be dupes, so let's track all they keys we've
+	// seen before putting new ones in.
+	unique := make(map[string]bool)
+	for _, param := range pathItem.Parameters {
+		// We can assume these are already unique because they originated
+		// from a map where the key was their name.
+		unique[param.Name] = true
+	}
 	for _, mediaTypeObject := range pathItem.Post.RequestBody.Content {
 		if mediaTypeObject.Schema == nil {
 			continue
@@ -160,13 +185,16 @@ func getPostParams(pathItem *framework.OASPathItem) map[string]framework.OASPara
 			continue
 		}
 		for propertyName, schema := range mediaTypeObject.Schema.Properties {
-			postParams[propertyName] = framework.OASParameter{
+			if ok := unique[propertyName]; ok {
+				continue
+			}
+			pathItem.Parameters = append(pathItem.Parameters, framework.OASParameter{
 				Name:        propertyName,
 				Description: schema.Description,
 				In:          "post",
 				Schema:      schema,
-			}
+			})
+			unique[propertyName] = true
 		}
 	}
-	return postParams
 }

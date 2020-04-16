@@ -101,7 +101,7 @@ func TestGenerateResource(t *testing.T) {
 	if err := json.NewDecoder(bytes.NewReader([]byte(examplePathItem))).Decode(pathItem); err != nil {
 		t.Fatal(err)
 	}
-	if err := generateResource(os.Stdout, examplePath, pathItem); err != nil {
+	if err := parseTemplate(os.Stdout, examplePath, pathItem); err != nil {
 		t.Fatal(err)
 	}
 }
