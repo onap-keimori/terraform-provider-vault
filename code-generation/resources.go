@@ -5,6 +5,7 @@ import (
 	"html/template"
 	"io"
 	"os"
+	"sort"
 	"strings"
 
 	"github.com/hashicorp/go-hclog"
@@ -90,13 +91,27 @@ func toTemplateable(path, dirName string, pathItem *framework.OASPathItem) *temp
 	// For the rest of the params, they're located in the post body
 	// of the OpenAPI spec, so let's tack them together.
 	postParams := getPostParams(pathItem)
-	for _, postParam := range postParams {
-		pathItem.Parameters = append(pathItem.Parameters, postParam)
+
+	// There also can be dupes, so let's track all they keys we've
+	// seen before putting new ones in.
+	unique := make(map[string]bool)
+	for _, param := range pathItem.Parameters {
+		// We can assume these are already unique because they originated
+		// from a map where the key was their name.
+		unique[param.Name] = true
 	}
-	//// Sort the parameters by name.
-	//sort.Slice(pathItem.Parameters, func(i, j int) bool {
-	//	return pathItem.Parameters[i].Name < pathItem.Parameters[j].Name
-	//})
+	for _, param := range postParams {
+		if found := unique[param.Name]; !found {
+			pathItem.Parameters = append(pathItem.Parameters, param)
+			unique[param.Name] = true
+		}
+	}
+
+	// Sort the parameters by name so they won't shift every time
+	// new files are generated.
+	sort.Slice(pathItem.Parameters, func(i, j int) bool {
+		return pathItem.Parameters[i].Name < pathItem.Parameters[j].Name
+	})
 	return &templatable{
 		Endpoint:           path,
 		DirName:            dirName[strings.LastIndex(dirName, "/")+1:],
@@ -109,7 +124,7 @@ func toTemplateable(path, dirName string, pathItem *framework.OASPathItem) *temp
 	}
 }
 
-func getPostParams(pathItem *framework.OASPathItem) []framework.OASParameter {
+func getPostParams(pathItem *framework.OASPathItem) map[string]framework.OASParameter {
 	if pathItem.Post == nil {
 		return nil
 	}
@@ -137,11 +152,7 @@ func getPostParams(pathItem *framework.OASPathItem) []framework.OASParameter {
 			}
 		}
 	}
-	var toReturn []framework.OASParameter
-	for _, param := range postParams {
-		toReturn = append(toReturn, param)
-	}
-	return toReturn
+	return postParams
 }
 
 const resourceTemplate = `package {{.DirName}}

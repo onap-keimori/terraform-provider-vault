@@ -34,10 +34,6 @@ func NameResource() *schema.Resource {
 			Optional:    true,
 			Description: "A comma separated string or slice of transformations to use.",
 		},
-		"transformations": {
-			Optional:    true,
-			Description: "A comma separated string or slice of transformations to use.",
-		},
 	}
 	return &schema.Resource{
 		Create: nameCreateResource,
@@ -59,9 +55,6 @@ func nameCreateResource(d *schema.ResourceData, meta interface{}) error {
 	data := map[string]interface{}{}
 	if v, ok := d.GetOkExists("name"); ok {
 		data["name"] = v
-	}
-	if v, ok := d.GetOkExists("transformations"); ok {
-		data["transformations"] = v
 	}
 	if v, ok := d.GetOkExists("transformations"); ok {
 		data["transformations"] = v
@@ -99,9 +92,6 @@ func nameReadResource(d *schema.ResourceData, meta interface{}) error {
 	if err := d.Set("transformations", resp.Data["transformations"]); err != nil {
 		return fmt.Errorf("error setting state key 'transformations': %s", err)
 	}
-	if err := d.Set("transformations", resp.Data["transformations"]); err != nil {
-		return fmt.Errorf("error setting state key 'transformations': %s", err)
-	}
 	return nil
 }
 
@@ -114,9 +104,6 @@ func nameUpdateResource(d *schema.ResourceData, meta interface{}) error {
 	data := map[string]interface{}{}
 	if d.HasChange("name") {
 		data["name"] = d.Get("name")
-	}
-	if d.HasChange("transformations") {
-		data["transformations"] = d.Get("transformations")
 	}
 	if d.HasChange("transformations") {
 		data["transformations"] = d.Get("transformations")
