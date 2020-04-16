@@ -17,7 +17,7 @@ make fmt
 for deprecations.
 - Hand-test the code while comparing it to Vault's API docs until you're satisfied that
 the generated code is correct. This is an important piece of the QA process.
-- Hand-write tests for the code.
+- Hand-write unit tests for the code.
 - Hand-add the new resource or data source to `vault/provider.go`.
 
 This process is designed this way to ensure high quality in the generated code.
