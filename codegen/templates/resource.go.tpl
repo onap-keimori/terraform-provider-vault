@@ -1,4 +1,4 @@
-package {{.DirName}}
+package {{ .DirName }}
 // DO NOT EDIT
 // This code is generated.
 
@@ -42,8 +42,9 @@ func {{ .ExportedFuncPrefix }}Resource() *schema.Resource {
 			{{- if (eq .Schema.Type "integer") }}
 			Type:        schema.TypeInt,
 			{{- end }}
-			{{- if (eq .Schema.Type "object") }}
-			Type:        schema.TypeInt,
+			{{- if (eq .Schema.Type "array") }}
+			Type:        schema.TypeList,
+			Elem:        &schema.Schema{Type: schema.TypeString},
 			{{- end }}
 			{{- if .Required }}
 			Required:    true,

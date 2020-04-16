@@ -32,6 +32,8 @@ func NameResource() *schema.Resource {
 			Description: "The name of the role.",
 		},
 		"transformations": {
+			Type:        schema.TypeList,
+			Elem:        &schema.Schema{Type: schema.TypeString},
 			Optional:    true,
 			Description: "A comma separated string or slice of transformations to use.",
 		},

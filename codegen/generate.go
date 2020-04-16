@@ -11,8 +11,19 @@ import (
 
 	"github.com/hashicorp/go-hclog"
 	"github.com/hashicorp/vault/sdk/framework"
+	"github.com/hashicorp/vault/sdk/helper/strutil"
 )
 
+var supportedParamTypes = []string{
+	"string",
+	"boolean",
+	"integer",
+	"array", // We presently only support string arrays.
+}
+
+// pathToHomeDir is a var that's written once when the package is
+// initialized. It's used for locating where to find and write
+// project files related to code generation.
 var pathToHomeDir = func() string {
 	repoName := "terraform-provider-vault"
 	wd, _ := os.Getwd()
@@ -20,6 +31,12 @@ var pathToHomeDir = func() string {
 	return pathParts[0] + repoName
 }()
 
+// GenerateFiles is used to generate the code and doc for one single resource
+// or data source. For example, if you provided it with the path
+// "/transform/transformation/{name}" and a fileType of Resource, it would
+// generate both the Go code for the resource, and a starter doc for it.
+// Tests are not generated at this time because we'd prefer human eyes and hands
+// on the generated code before including it in the provider.
 func GenerateFiles(logger hclog.Logger, fileType FileType, path string, pathItem *framework.OASPathItem) error {
 	if err := generateCode(logger, fileType, path, pathItem); err != nil {
 		return err
@@ -30,8 +47,9 @@ func GenerateFiles(logger hclog.Logger, fileType FileType, path string, pathItem
 	return nil
 }
 
+// generateCode generates the code (and file) for either one resource, or one data source.
 func generateCode(logger hclog.Logger, fileType FileType, path string, pathItem *framework.OASPathItem) error {
-	pathToFile := cleanFilePath(fmt.Sprintf("%s/generated/%s%s.go", pathToHomeDir, fileType.String(), path))
+	pathToFile := stripCurlyBraces(fmt.Sprintf("%s/generated/%s%s.go", pathToHomeDir, fileType.String(), path))
 	parentDir := pathToFile[:strings.LastIndex(pathToFile, "/")]
 	if err := os.MkdirAll(parentDir, 0775); err != nil {
 		return err
@@ -57,21 +75,11 @@ func generateCode(logger hclog.Logger, fileType FileType, path string, pathItem 
 	return nil
 }
 
-func cleanFilePath(path string) string {
-	path = strings.Replace(path, "{", "", -1)
-	path = strings.Replace(path, "}", "", -1)
-	return path
-}
-
-func toDocName(s string) string {
-	if strings.HasPrefix(s, "/") {
-		s = s[1:]
-	}
-	return strings.Replace(s, "/", "-", -1)
-}
-
+// generateDoc generates the doc for a resource or data source, and the file for it.
+// The file is incomplete with a number of placeholders for the author to fill in
+// additional information.
 func generateDoc(logger hclog.Logger, fileType FileType, path string, pathItem *framework.OASPathItem) error {
-	pathToFile := cleanFilePath(fmt.Sprintf("%s/website/docs/generated/%s/%s.md", pathToHomeDir, fileType.String(), toDocName(path)))
+	pathToFile := stripCurlyBraces(fmt.Sprintf("%s/website/docs/generated/%s/%s.md", pathToHomeDir, fileType.String(), replaceSlashesWithDashes(path)))
 	parentDir := pathToFile[:strings.LastIndex(pathToFile, "/")]
 	if err := os.MkdirAll(parentDir, 0775); err != nil {
 		return err
@@ -97,20 +105,23 @@ func generateDoc(logger hclog.Logger, fileType FileType, path string, pathItem *
 	return nil
 }
 
-// parseTemplate takes one pathItem and uses a template to generate code
-// for it. This code is written to the given writer.
+// parseTemplate takes one pathItem and uses a template to generate text
+// for it. This test is written to the given writer.
 func parseTemplate(writer io.Writer, fileType FileType, path, dirName string, pathItem *framework.OASPathItem) error {
 	tmpl, err := template.New(fileType.String()).Parse(templates[fileType])
 	if err != nil {
 		return err
 	}
-	// TODO toTemplateable could only be called once.
-	return tmpl.Execute(writer, toTemplateable(path, dirName, pathItem))
+	tmplFriendly, err := toTemplateFriendly(path, dirName, pathItem)
+	if err != nil {
+		return err
+	}
+	return tmpl.Execute(writer, tmplFriendly)
 }
 
-// templatable is a convenience struct that plays easily with Go's
+// templateFriendly is a convenience struct that plays nicely with Go's
 // template package.
-type templatable struct {
+type templateFriendly struct {
 	Endpoint           string
 	DirName            string
 	ExportedFuncPrefix string
@@ -121,42 +132,51 @@ type templatable struct {
 	SupportsDelete     bool
 }
 
-// TODO need to generate docs too
 // TODO sensitive fields
 // TODO what about ForceNew, Computed
-// TODO doesn't yet support field types of "object", "array"
-func toTemplateable(path, dirName string, pathItem *framework.OASPathItem) *templatable {
+// toTemplateFriendly does a bunch of work to format the given data into a
+// struct that has fields that will be idiomatic to use with Go's templating
+// language.
+func toTemplateFriendly(path, dirName string, pathItem *framework.OASPathItem) (*templateFriendly, error) {
 	// Isolate the last field in the path and use it to prefix functions
 	// to prevent naming collisions.
 	pathFields := strings.Split(path, "/")
-	lastField := pathFields[0]
+	prefix := pathFields[0]
 	if len(pathFields) > 1 {
-		lastField = pathFields[len(pathFields)-1]
+		prefix = pathFields[len(pathFields)-1]
 	}
-	lastField = strings.Replace(lastField, "{", "", -1)
-	lastField = strings.Replace(lastField, "}", "", -1)
-	lastField = strings.Replace(lastField, "_", "", -1)
+	prefix = stripCurlyBraces(prefix)
+
+	// We don't want snake case from the field name in Go code.
+	prefix = strings.Replace(prefix, "_", "", -1)
 
 	appendPostParamsToTopLevel(pathItem)
 
+	// Validate that we don't have any unsupported parameters.
+	for _, param := range pathItem.Parameters {
+		if !strutil.StrListContains(supportedParamTypes, param.Schema.Type) {
+			return nil, fmt.Errorf(`can't generate %q because parameter type of %q for %s is unsupported'`, path, param.Schema.Type, param.Name)
+		}
+	}
+
 	// Sort the parameters by name so they won't shift every time
-	// new files are generated.
+	// new files are generated due to having originated in maps.
 	sort.Slice(pathItem.Parameters, func(i, j int) bool {
 		return pathItem.Parameters[i].Name < pathItem.Parameters[j].Name
 	})
-	return &templatable{
+	return &templateFriendly{
 		Endpoint:           path,
 		DirName:            dirName[strings.LastIndex(dirName, "/")+1:],
-		ExportedFuncPrefix: strings.Title(strings.ToLower(lastField)),
-		PrivateFuncPrefix:  strings.ToLower(lastField),
+		ExportedFuncPrefix: strings.Title(strings.ToLower(prefix)),
+		PrivateFuncPrefix:  strings.ToLower(prefix),
 		Parameters:         pathItem.Parameters,
 		SupportsRead:       pathItem.Get != nil,
 		SupportsWrite:      pathItem.Post != nil,
 		SupportsDelete:     pathItem.Delete != nil,
-	}
+	}, nil
 }
 
-// parameters can be buried deep in the post request body. For
+// Parameters can be buried deep in the post request body. For
 // convenience during templating, we dig down and grab those,
 // and just put them at the top level with the rest.
 func appendPostParamsToTopLevel(pathItem *framework.OASPathItem) {
@@ -197,4 +217,22 @@ func appendPostParamsToTopLevel(pathItem *framework.OASPathItem) {
 			unique[propertyName] = true
 		}
 	}
+}
+
+// replaceSlashesWithDashes converts a path like "/transform/transformation/{name}"
+// to "transform-transformation-{name}". Note that it trims leading slashes.
+func replaceSlashesWithDashes(s string) string {
+	if strings.HasPrefix(s, "/") {
+		s = s[1:]
+	}
+	return strings.Replace(s, "/", "-", -1)
+}
+
+// stripCurlyBraces converts a path like
+// "generated/resources/transform-transformation-{name}.go"
+// to "generated/resources/transform-transformation-name.go".
+func stripCurlyBraces(path string) string {
+	path = strings.Replace(path, "{", "", -1)
+	path = strings.Replace(path, "}", "", -1)
+	return path
 }

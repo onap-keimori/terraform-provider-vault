@@ -27,6 +27,8 @@ func NameResource() *schema.Resource {
 			},
 		},
 		"allowed_roles": {
+			Type:        schema.TypeList,
+			Elem:        &schema.Schema{Type: schema.TypeString},
 			Optional:    true,
 			Description: "The set of roles allowed to perform this transformation.",
 		},
