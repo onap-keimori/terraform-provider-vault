@@ -42,12 +42,16 @@ func main() {
 			if !strings.HasPrefix(path, allowedPath) {
 				continue
 			}
-			count += 2
 			logger.Info(fmt.Sprintf("generating %s and docs for %s\n", fileType.String(), path))
 			if err := codegen.GenerateFiles(logger, fileType, path, pathItem); err != nil {
+				if err == codegen.ErrUnsupported {
+					logger.Warn(fmt.Sprintf("couldn't generate %s, continuing", path))
+					continue
+				}
 				logger.Error(err.Error())
 				os.Exit(1)
 			}
+			count += 2
 		}
 	}
 	logger.Info(fmt.Sprintf("generated %d files\n", count))

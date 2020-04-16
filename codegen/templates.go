@@ -33,8 +33,7 @@ func (t FileType) String() string {
 }
 
 // templates is populated when the package initializes, and reads in
-// all the templates that are available. It's done once at initialization
-// to avoid calling it repeatedly.
+// all the templates that are available.
 var templates = func() map[FileType]string {
 	tmpls := make(map[FileType]string, len(templatePaths))
 	for fileType, path := range templatePaths {

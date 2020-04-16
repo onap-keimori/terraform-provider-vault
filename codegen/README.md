@@ -1,6 +1,9 @@
 # Generating Resources and Data Sources
 
-This code is part of a new code generation package. The process for generating code is:
+This code is part of a code generation package. It is intended to speed 
+up development while still yielding high quality code.
+
+## How to Generate Code and Docs
 - Ensure `testdata/openapi.json` includes the endpoints for which you want to generate code.
 - If it doesn't:
   - Make a new Vault dev binary from the `vault-enterprise` repo.
@@ -21,5 +24,3 @@ the generated code is correct. This is an important piece of the QA process.
 - Hand-add the new resource or data source to `vault/provider.go`.
 - Hand update the partially generated doc to complete it.
 - Add the doc to the sidebar/layout so it will appear in nav.
-
-This process is designed this way to ensure high quality in the generated code.

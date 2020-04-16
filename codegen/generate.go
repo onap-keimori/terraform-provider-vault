@@ -2,6 +2,7 @@ package codegen
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"html/template"
 	"io"
@@ -14,22 +15,23 @@ import (
 	"github.com/hashicorp/vault/sdk/helper/strutil"
 )
 
-var supportedParamTypes = []string{
-	"string",
-	"boolean",
-	"integer",
-	"array", // We presently only support string arrays.
-}
+var (
+	ErrUnsupported = errors.New("code and doc generation for this item is unsupported")
 
-// pathToHomeDir is a var that's written once when the package is
-// initialized. It's used for locating where to find and write
-// project files related to code generation.
-var pathToHomeDir = func() string {
-	repoName := "terraform-provider-vault"
-	wd, _ := os.Getwd()
-	pathParts := strings.Split(wd, repoName)
-	return pathParts[0] + repoName
-}()
+	supportedParamTypes = []string{
+		"string",
+		"boolean",
+		"integer",
+		"array", // We presently only support string arrays.
+	}
+
+	pathToHomeDir = func() string {
+		repoName := "terraform-provider-vault"
+		wd, _ := os.Getwd()
+		pathParts := strings.Split(wd, repoName)
+		return pathParts[0] + repoName
+	}()
+)
 
 // GenerateFiles is used to generate the code and doc for one single resource
 // or data source. For example, if you provided it with the path
@@ -69,7 +71,7 @@ func generateCode(logger hclog.Logger, fileType FileType, path string, pathItem 
 			logger.Error(err.Error())
 		}
 	}()
-	if err := parseTemplate(w, fileType, path, parentDir, pathItem); err != nil {
+	if err := parseTemplate(logger, w, fileType, path, parentDir, pathItem); err != nil {
 		return err
 	}
 	return nil
@@ -99,7 +101,7 @@ func generateDoc(logger hclog.Logger, fileType FileType, path string, pathItem *
 			logger.Error(err.Error())
 		}
 	}()
-	if err := parseTemplate(w, FileTypeDoc, path, parentDir, pathItem); err != nil {
+	if err := parseTemplate(logger, w, FileTypeDoc, path, parentDir, pathItem); err != nil {
 		return err
 	}
 	return nil
@@ -107,12 +109,12 @@ func generateDoc(logger hclog.Logger, fileType FileType, path string, pathItem *
 
 // parseTemplate takes one pathItem and uses a template to generate text
 // for it. This test is written to the given writer.
-func parseTemplate(writer io.Writer, fileType FileType, path, dirName string, pathItem *framework.OASPathItem) error {
+func parseTemplate(logger hclog.Logger, writer io.Writer, fileType FileType, path, dirName string, pathItem *framework.OASPathItem) error {
 	tmpl, err := template.New(fileType.String()).Parse(templates[fileType])
 	if err != nil {
 		return err
 	}
-	tmplFriendly, err := toTemplateFriendly(path, dirName, pathItem)
+	tmplFriendly, err := toTemplateFriendly(logger, path, dirName, pathItem)
 	if err != nil {
 		return err
 	}
@@ -137,7 +139,7 @@ type templateFriendly struct {
 // toTemplateFriendly does a bunch of work to format the given data into a
 // struct that has fields that will be idiomatic to use with Go's templating
 // language.
-func toTemplateFriendly(path, dirName string, pathItem *framework.OASPathItem) (*templateFriendly, error) {
+func toTemplateFriendly(logger hclog.Logger, path, dirName string, pathItem *framework.OASPathItem) (*templateFriendly, error) {
 	// Isolate the last field in the path and use it to prefix functions
 	// to prevent naming collisions.
 	pathFields := strings.Split(path, "/")
@@ -147,7 +149,7 @@ func toTemplateFriendly(path, dirName string, pathItem *framework.OASPathItem) (
 	}
 	prefix = stripCurlyBraces(prefix)
 
-	// We don't want snake case from the field name in Go code.
+	// We don't want snake case for the field name in Go code.
 	prefix = strings.Replace(prefix, "_", "", -1)
 
 	appendPostParamsToTopLevel(pathItem)
@@ -155,7 +157,8 @@ func toTemplateFriendly(path, dirName string, pathItem *framework.OASPathItem) (
 	// Validate that we don't have any unsupported parameters.
 	for _, param := range pathItem.Parameters {
 		if !strutil.StrListContains(supportedParamTypes, param.Schema.Type) {
-			return nil, fmt.Errorf(`can't generate %q because parameter type of %q for %s is unsupported'`, path, param.Schema.Type, param.Name)
+			logger.Error(fmt.Sprintf(`can't generate %q because parameter type of %q for %s is unsupported'`, path, param.Schema.Type, param.Name))
+			return nil, ErrUnsupported
 		}
 	}
 
